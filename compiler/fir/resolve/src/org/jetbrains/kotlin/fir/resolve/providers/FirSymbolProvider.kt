@@ -26,23 +26,6 @@ annotation class FirSymbolProviderInternals
 abstract class FirSymbolProvider(protected val session: FirSession) : FirSessionComponent {
     abstract fun getClassLikeSymbolByFqName(classId: ClassId): FirClassLikeSymbol<*>?
 
-    fun getSymbolByLookupTag(lookupTag: ConeClassLikeLookupTag): FirClassLikeSymbol<*>? {
-        (lookupTag as? ConeClassLikeLookupTagImpl)
-            ?.boundSymbol?.takeIf { it.first === this }?.let { return it.second }
-
-        return getClassLikeSymbolByFqName(lookupTag.classId).also {
-            (lookupTag as? ConeClassLikeLookupTagImpl)?.bindSymbolToLookupTag(this, it)
-        }
-    }
-
-    fun getSymbolByLookupTag(lookupTag: ConeClassifierLookupTag): FirClassifierSymbol<*>? {
-        return when (lookupTag) {
-            is ConeClassLikeLookupTag -> getSymbolByLookupTag(lookupTag)
-            is ConeClassifierLookupTagWithFixedSymbol -> lookupTag.symbol
-            else -> error("Unknown lookupTag type: ${lookupTag::class}")
-        }
-    }
-
     @OptIn(ExperimentalStdlibApi::class, FirSymbolProviderInternals::class)
     open fun getTopLevelCallableSymbols(packageFqName: FqName, name: Name): List<FirCallableSymbol<*>> {
         return buildList { getTopLevelCallableSymbolsTo(this, packageFqName, name) }
@@ -52,6 +35,25 @@ abstract class FirSymbolProvider(protected val session: FirSession) : FirSession
     abstract fun getTopLevelCallableSymbolsTo(destination: MutableList<FirCallableSymbol<*>>, packageFqName: FqName, name: Name)
 
     abstract fun getPackage(fqName: FqName): FqName? // TODO: Replace to symbol sometime
+
+    fun getSymbolByLookupTag(lookupTag: ConeClassLikeLookupTag): FirClassLikeSymbol<*>? {
+//        (lookupTag as? ConeClassLikeLookupTagImpl)
+//            ?.boundSymbol?.takeIf { it.first === this }?.let { return it.second }
+
+        return getClassLikeSymbolByFqName(lookupTag.classId)
+//            .also {
+//            (lookupTag as? ConeClassLikeLookupTagImpl)?.bindSymbolToLookupTag(this, it)
+//        }
+    }
+
+    // TODO: think about it
+    fun getSymbolByLookupTag(lookupTag: ConeClassifierLookupTag): FirClassifierSymbol<*>? {
+        return when (lookupTag) {
+            is ConeClassLikeLookupTag -> getSymbolByLookupTag(lookupTag)
+            is ConeClassifierLookupTagWithFixedSymbol -> lookupTag.symbol
+            else -> error("Unknown lookupTag type: ${lookupTag::class}")
+        }
+    }
 }
 
 fun FirSymbolProvider.getClassDeclaredCallableSymbols(classId: ClassId, name: Name): List<FirCallableSymbol<*>> {
